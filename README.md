@@ -1,5 +1,5 @@
 # foodgram-project
-![foodgram_workflow](https://github.com/EnterLife/foodgram-project/.github/workflows/foodgram_workflow.yml/badge.svg)
+![foodgram_workflow](https://github.com/EnterLife/foodgram-project-react/blob/master/.github/workflows/foodgram_workflow.yaml/badge.svg)
 
 Дипломный проект — сайт Foodgram - «Продуктовый помощник».
 
