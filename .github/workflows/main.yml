@@ -36,12 +36,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
+      - name: Build and push backend
         uses: docker/build-push-action@v2
         with:
           push: true
           context: ./backend/
           tags: enterlife/foodgram:latest
+  
+        - name: Build and push frontend
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          context: ./frontend/
+          tags: enterlife/foodgram_frontend:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -58,7 +65,7 @@ jobs:
           stack_file_name: docker-compose.yml
           script: |
             sudo docker pull enterlife/foodgram:latest
-            sudo docker pull enterlife/foodgram_frontend:v1.0
+            sudo docker pull enterlife/foodgram_frontend:latest
             sudo docker-compose stop
             sudo docker-compose rm web
             touch .env 
