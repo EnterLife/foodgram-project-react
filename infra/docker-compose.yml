@@ -21,7 +21,7 @@ services:
       - ./.env
 
   frontend:
-    image: enterlife/foodgram_frontend:latest
+    image: enterlife/foodgram_frontend:v_1
     volumes:
       - frontend_data:/app/build/
     depends_on:
