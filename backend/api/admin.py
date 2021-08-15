@@ -4,8 +4,8 @@ from .models import Favorite, Follow, Ingredient, Recipe, ShoppingList, Tag
 
 
 class RecipeAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'name', 'author')
     list_filter = ('author', 'name', 'tags')
-    list_display = ('name', 'followers')
 
     @admin.display(empty_value=None)
     def followers(self, obj):
