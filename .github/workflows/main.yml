@@ -45,7 +45,7 @@ jobs:
         with:
           push: true
           context: ./backend/
-          tags:enterlife/foodgram:latest
+          tags: enterlife/foodgram:latest
 
   deploy:
     runs-on: ubuntu-latest
