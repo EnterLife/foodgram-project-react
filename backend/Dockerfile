@@ -1,7 +1,6 @@
-FROM python:3.8.5 
- 
-WORKDIR /code 
-COPY requirements.txt .
-RUN pip install -r requirements.txt 
+FROM python:3.8.5
+WORKDIR /code
+COPY requirements.txt /code
+RUN pip3 install -r requirements.txt
 COPY . /code
-CMD gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+CMD gunicorn foodgram_project.wsgi:application --bind 0.0.0.0:8000
