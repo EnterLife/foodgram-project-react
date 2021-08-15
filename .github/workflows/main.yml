@@ -43,12 +43,12 @@ jobs:
           context: ./backend/
           tags: enterlife/foodgram:latest
   
-        - name: Build and push frontend
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          context: ./frontend/
-          tags: enterlife/foodgram_frontend:latest
+      - name: Build and push frontend
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        context: ./frontend/
+        tags: enterlife/foodgram_frontend:latest
 
   deploy:
     runs-on: ubuntu-latest
