@@ -10,9 +10,7 @@ services:
     restart: always
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    image: enterlife/foodgram_backend:latest
     restart: always
     volumes:
       - static_value:/code/backend_static/
@@ -23,11 +21,9 @@ services:
       - ./.env
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: enterlife/foodgram_frontend:latest
     volumes:
-      - ../frontend/:/app/result_build/
+      - frontend_data:/app/build/
 
   nginx:
     image: nginx:1.19.3
