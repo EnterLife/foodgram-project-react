@@ -24,13 +24,9 @@ services:
       - ./.env
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: enterlife/foodgram_frontend:lastest
     volumes:
-      - ../frontend/:/app/result_build/
-    depends_on:
-      - db
+      - frontend_data:/app/build/
 
   nginx:
     image: nginx:1.19.3
@@ -53,3 +49,4 @@ volumes:
   postgres_data:
   static_value:
   media_value:
+  frontend_data:
