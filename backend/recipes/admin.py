@@ -1,64 +1,41 @@
 from django.contrib import admin
+from import_export.admin import ImportMixin
 
-from .models import Recipe, Ingredient, Tag, ShoppingCart, Favorite
-
-
-@admin.register(Recipe)
-class RecipeAdmin(admin.ModelAdmin):
-    fields = ('author',
-              'name',
-              'image',
-              'text',
-              'cooking_time',
-              )
-    readonly_fields = (
-        'pub_date',
-    )
-    empty_value_display = '-пусто-'
+from .models import (Favorites, Follow, Ingredient, IngredientForRecipe,
+                     Recipe, Tag)
+from .resources import IngredientResource
 
 
-@admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
-    fields = (
-        'name',
-        'measurement_unit'
-    )
-    empty_value_display = '-пусто-'
-
-
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    fields = (
-        'name',
-        'color',
-        'slug'
-    )
-    empty_value_display = '-пусто-'
-
-
-@admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'user',
-        'recipe',
-        'added_date'
-    )
-    search_fields = (
-        'user',
-        'recipe'
-    )
+    list_display = ('id', 'recipe', 'user')
 
 
-@admin.register(ShoppingCart)
-class ShoppingCartAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'user',
-        'recipe',
-        'added_date'
-    )
-    search_fields = (
-        'user',
-        'recipe'
-    )
+class IngredientForRecipeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'ingredient', 'recipe', 'amount')
+
+
+class RecipeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'author', 'name',)
+    list_filter = ('author', 'name', 'tags')
+
+
+class IngredientAdmin(ImportMixin, admin.ModelAdmin):
+    list_filter = ('id', 'name', 'measurement_unit',)
+    search_fields = ('name',)
+    resource_class = IngredientResource
+
+
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name', 'color', 'slug')
+
+
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ('author', 'user')
+
+
+admin.site.register(IngredientForRecipe, IngredientForRecipeAdmin)
+admin.site.register(Follow, FollowAdmin)
+admin.site.register(Tag, TagAdmin)
+admin.site.register(Ingredient, IngredientAdmin)
+admin.site.register(Recipe, RecipeAdmin)
+admin.site.register(Favorites, FavoriteAdmin)

@@ -1,10 +1,6 @@
-from django.urls import path, include
-
-
-from .views import CustomAuthToken, Logout
+from django.urls import include, path, re_path
 
 urlpatterns = [
     path('', include('djoser.urls')),
-    path('auth/token/login/', CustomAuthToken.as_view()),
-    path('auth/token/logout/', Logout.as_view())
+    re_path(r'^auth/', include('djoser.urls.authtoken')),
 ]
