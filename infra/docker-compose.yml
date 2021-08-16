@@ -23,7 +23,7 @@ services:
       - ./.env
 
   frontend:
-    image: simkamak/foodgram_front:latest
+    image: enterlife/foodgram_front:latest
     volumes:
       - frontend_data:/app/build/
 
