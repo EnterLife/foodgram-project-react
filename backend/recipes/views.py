@@ -30,37 +30,21 @@ class TagsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipesViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
     pagination_class = PageNumberPagination
     permission_classes = [AdminOrAuthorOrReadOnly, ]
-
-    def get_queryset(self):
-        queryset = Recipe.objects.all()
-        is_in_shopping_cart = self.request.query_params.get(
-            "is_in_shopping_cart"
-        )
-        is_favorited = self.request.query_params.get("is_favorited")
-        cart = Purchase.objects.filter(user=self.request.user.id)
-        favorite = Favorite.objects.filter(user=self.request.user.id)
-
-        if is_in_shopping_cart == "true":
-            queryset = queryset.filter(purchase__in=cart)
-        elif is_in_shopping_cart == "false":
-            queryset = queryset.exclude(purchase__in=cart)
-        if is_favorited == "true":
-            queryset = queryset.filter(favorites__in=favorite)
-        elif is_favorited == "false":
-            queryset = queryset.exclude(favorites__in=favorite)
-        return queryset.all()
 
     def get_serializer_class(self):
         if self.request.method in ['GET']:
             return RecipeReadSerializer
         return RecipeSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -126,13 +110,13 @@ class FollowView(APIView):
 
     def get(self, request, user_id):
         user = request.user
-        author = get_object_or_404(User, id=user_id)
-        serializer = FollowSerializer(
-            data={'user': user.id, 'author': user_id}
-        )
+        data = {
+            'user': user.id,
+            'author': user_id
+        }
+        serializer = FollowSerializer(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
-        serializer = ShowFollowsSerializer(author)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, user_id):
@@ -150,14 +134,16 @@ class FavoriteView(APIView):
 
     def get(self, request, recipe_id):
         user = request.user
-        recipe = get_object_or_404(Recipe, id=recipe_id)
+        data = {
+            'user': user.id,
+            'recipe': recipe_id,
+        }
         serializer = FavoriteSerializer(
-            data={'user': user.id, 'recipe': recipe.id},
+            data=data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save(recipe=recipe, user=request.user)
-        serializer = RecipeSubscriptionSerializer(recipe)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
@@ -175,20 +161,20 @@ class ShoppingCartView(APIView):
 
     def get(self, request, recipe_id):
         user = request.user
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        serializer = PurchaseSerializer(
-            data={'user': user.id, 'recipe': recipe.id},
-            context={'request': request}
-        )
+        data = {
+            'user': user.id,
+            'recipe': recipe_id,
+        }
+        context = {'request': request}
+        serializer = PurchaseSerializer(data=data, context=context)
         serializer.is_valid(raise_exception=True)
-        serializer.save(recipe=recipe, user=request.user)
-        serializer = RecipeSubscriptionSerializer(recipe)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
         user = request.user
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        cart = get_object_or_404(Purchase, user=user, recipe=recipe)
-        cart.delete()
-        return Response(f'Рецепт {recipe} удален из корзины у пользователя '
-                        f'{user}', status=status.HTTP_204_NO_CONTENT)
+        Purchase.objects.get(user=user, recipe=recipe).delete()
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
