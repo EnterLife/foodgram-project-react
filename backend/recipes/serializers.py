@@ -31,6 +31,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
+    queryset = User.objects.all()
     user = serializers.IntegerField(source='user.id')
     author = serializers.IntegerField(source='author.id')
 
@@ -38,21 +39,26 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ['user', 'author']
 
-    def create(self, validated_data):
-        author = validated_data.get('author')
-        author = get_object_or_404(User, pk=author.get('id'))
-        user = validated_data.get('user')
-        if user == author:
-            raise serializers.ValidationError(
-                'Вы не можете подписаться на самого себя'
-            )
-        if Follow.objects.filter(
-                author=author,
-                user=user).exists():
-            raise serializers.ValidationError(
-                'Вы уже подписаны'
-            )
-        return Follow.objects.create(user=user, author=author)
+    def validate(self, validated_data):
+        user = self.context.get('request').user
+        author_id = validated_data['author'].id
+        follow_exist = Follow.objects.filter(
+            user=user,
+            author__id=author_id
+        ).exists()
+
+        if self.context.get('request').method == 'GET':
+            if user.id == author_id or follow_exist:
+                raise serializers.ValidationError(
+                    'Вы уже подписаны')
+        return validated_data
+
+    def to_representation(self, instance):
+        request = self.context.get('request')
+        context = {'request': request}
+        return ShowFollowsSerializer(
+            instance.author,
+            context=context).validated_data
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -63,17 +69,24 @@ class FavoriteSerializer(serializers.ModelSerializer):
         model = Favorite
         fields = ['user', 'recipe']
 
-    def create(self, validated_data):
-        user = validated_data['user']
-        recipe = validated_data['recipe']
-        obj, created = Favorite.objects.get_or_create(user=user,
-                                                      recipe=recipe)
-        if not created:
+    def validate(self, validated_data):
+        user = self.context.get('request').user
+        recipe_id = validated_data['recipe'].id
+
+        if (self.context.get('request').method == 'GET'
+                and Favorite.objects.filter(user=user,
+                                            recipe__id=recipe_id).exists()):
             raise serializers.ValidationError(
-                {
-                    'message': 'Нельзя добавить повторно в избранное'
-                }
-            )
+                'Рецепт уже добавлен в избранное')
+
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        if (self.context.get('request').method == 'DELETE'
+                and not Favorite.objects.filter(
+                    user=user,
+                    recipe=recipe).exists()):
+            raise serializers.ValidationError()
+
         return validated_data
 
 

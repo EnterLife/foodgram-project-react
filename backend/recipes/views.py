@@ -16,8 +16,7 @@ from .permissions import AdminOrAuthorOrReadOnly
 from .serializers import (FavoriteSerializer, FollowSerializer,
                           IngredientSerializer, PurchaseSerializer,
                           RecipeReadSerializer, RecipeSerializer,
-                          RecipeSubscriptionSerializer, ShowFollowsSerializer,
-                          TagSerializer)
+                          ShowFollowsSerializer, TagSerializer)
 
 User = get_user_model()
 
