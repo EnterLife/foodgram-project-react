@@ -18,7 +18,11 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
-        unique_together = ['author', 'user']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'], name='unique_follow'
+            )
+        ]
 
     def __str__(self):
         return f'{self.user} подписан на {self.author}'
@@ -29,20 +33,15 @@ class Tag(models.Model):
         verbose_name='Название',
         help_text='Введите название тега',
         max_length=200,
-        unique=True,
     )
     color = ColorField(
         verbose_name='Цвет в HEX',
         help_text='Введите цвет тега в HEX',
-        unique=True,
-        null=True,
     )
     slug = models.CharField(
-        verbose_name='Уникальный слаг',
-        help_text='Введите уникальный слаг',
+        verbose_name='Slug тэга',
+        help_text='Введите Slug тэга',
         max_length=200,
-        unique=True,
-        null=True,
     )
 
     class Meta:
@@ -57,6 +56,7 @@ class Ingredient(models.Model):
 
     name = models.CharField(
         max_length=200,
+        unique=True,
         verbose_name='Название ингредиента',
         help_text='Введите название ингредиента'
     )
@@ -139,7 +139,7 @@ class IngredientForRecipe(models.Model):
         return f'{self.ingredient} в {self.recipe}'
 
 
-class Favorites(models.Model):
+class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now_add=True,
@@ -148,7 +148,11 @@ class Favorites(models.Model):
     class Meta:
         verbose_name = 'Избранное'
         verbose_name_plural = verbose_name
-        unique_together = ['user', 'recipe']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'], name='unique_favorite'
+            )
+        ]
 
     def __str__(self):
         return f'Рецепт {self.recipe} в избранном у {self.user}'
@@ -164,7 +168,10 @@ class Purchase(models.Model):
         verbose_name = 'Покупка'
         verbose_name_plural = 'Покупки'
         ordering = ['-pub_date']
-        unique_together = ['user', 'recipe']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'], name='unique_shopping_cart'
+            )]
 
     def __str__(self):
         return f'Рецепт {self.recipe} в списке покупок у {self.user}'

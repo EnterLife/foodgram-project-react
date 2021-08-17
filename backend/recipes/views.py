@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .filters import IngredientNameFilter, RecipeFilter
-from .models import (Favorites, Follow, Ingredient, IngredientForRecipe,
+from .models import (Favorite, Follow, Ingredient, IngredientForRecipe,
                      Purchase, Recipe, Tag)
 from .permissions import AdminOrAuthorOrReadOnly
 from .serializers import (FavoriteSerializer, FollowSerializer,
@@ -42,7 +42,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
         )
         is_favorited = self.request.query_params.get("is_favorited")
         cart = Purchase.objects.filter(user=self.request.user.id)
-        favorite = Favorites.objects.filter(user=self.request.user.id)
+        favorite = Favorite.objects.filter(user=self.request.user.id)
 
         if is_in_shopping_cart == "true":
             queryset = queryset.filter(purchase__in=cart)
@@ -163,7 +163,7 @@ class FavoriteView(APIView):
     def delete(self, request, recipe_id):
         user = request.user
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        favorite = get_object_or_404(Favorites, user=user, recipe=recipe)
+        favorite = get_object_or_404(Favorite, user=user, recipe=recipe)
         favorite.delete()
         return Response(f'Рецепт {recipe} удален из избранного у пользователя '
                         f'{user}', status=status.HTTP_204_NO_CONTENT)
