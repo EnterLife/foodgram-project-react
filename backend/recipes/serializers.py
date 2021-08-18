@@ -138,7 +138,7 @@ class IngredientForRecipeCreate(IngredientForRecipeSerializer):
 
     def to_representation(self, instance):
         return IngredientForRecipeSerializer(
-            IngredientForRecipe.objects.get(ingredient=instance.id)
+            get_object_or_404(IngredientForRecipe, ingredient=instance.id)
         ).data
 
 
@@ -189,7 +189,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe.tags.set(tags)
         ingredients_instance = []
         for ingredient in ingredients:
-            ingredient_id = Ingredient.objects.get(id=ingredient['id'])
+            ingredient_id = get_object_or_404(Ingredient, id=ingredient['id'])
             amount = ingredient['amount']
             ingredients_instance.append(
                 IngredientForRecipe(
@@ -207,7 +207,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredients_instance = []
         for item in ingredients_data:
             amount = item['amount']
-            ingredient_id = Ingredient.objects.get(id=item['id'])
+            ingredient_id = get_object_or_404(Ingredient, id=item['id'])
             ingredients_instance.append(
                 IngredientForRecipe(
                     ingredient=ingredient_id, recipe=instance, amount=amount
