@@ -98,13 +98,16 @@ class PurchaseSerializer(serializers.ModelSerializer):
         model = Purchase
         fields = '__all__'
 
-    def create(self, validated_data):
-        user = validated_data['user']
+    def validate(self, validated_data):
+        author = self.context.get('request').user
         recipe = validated_data['recipe']
-        obj, created = Purchase.objects.get_or_create(user=user, recipe=recipe)
-        if not created:
+        recipe_exists = Purchase.objects.filter(
+            author=author,
+            recipe=recipe
+        ).exists()
+        if recipe_exists:
             raise serializers.ValidationError(
-                {'message': 'Вы уже добавили рецепт в корзину'}
+                'Вы уже добавили рецепт в корзину'
             )
         return validated_data
 
@@ -168,59 +171,65 @@ class RecipeSerializer(serializers.ModelSerializer):
             return False
         return Purchase.objects.filter(user=request.user, recipe=obj).exists()
 
+    def validate(self, validated_data):
+        ingredients = self.initial_data.get('ingredients')
+        for ingredient_item in ingredients:
+            if int(ingredient_item['amount']) < 0:
+                raise serializers.ValidationError({
+                    'ingredients': ('Убедитесь, что это значение больше 0.')
+                })
+        validated_data['ingredients'] = ingredients
+        return validated_data
+
     def create(self, validated_data):
-        request = self.context.get('request')
+        tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
-        tags_data = validated_data.pop('tags')
-        recipe = Recipe.objects.create(author=request.user, **validated_data)
-        recipe.tags.set(tags_data)
-        for ingredient in ingredients:
-            amount = ingredient.get('amount')
-            if amount < 1:
-                raise serializers.ValidationError(
-                    'Убедитесь, что это значение больше 0.'
-                )
-            ingredient_instance = get_object_or_404(Ingredient,
-                                                    pk=ingredient.get('id'))
-            IngredientForRecipe.objects.create(recipe=recipe,
-                                               ingredient=ingredient_instance,
-                                               amount=amount)
+        recipe = Recipe.objects.create(**validated_data)
         recipe.save()
+        recipe.tags.set(tags)
+        ingredients_instance = []
+        for ingredient in ingredients:
+            ingredient_id = Ingredient.objects.get(id=ingredient['id'])
+            amount = ingredient['amount']
+            ingredients_instance.append(
+                IngredientForRecipe(
+                    ingredient=ingredient_id,
+                    recipe=recipe, amount=amount
+                )
+            )
+        IngredientForRecipe.objects.bulk_create(ingredients_instance)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('ingredients')
         tags_data = validated_data.pop('tags')
-        recipe = Recipe.objects.filter(id=instance.id)
-        recipe.update(**validated_data)
-        ingredients_instance = [
-            ingredient for ingredient in instance.ingredients.all()
-        ]
+        IngredientForRecipe.objects.filter(recipe=instance).delete()
+        ingredients_instance = []
         for item in ingredients_data:
             amount = item['amount']
-            ingredient_id = item['id']
-            if amount < 1:
-                raise serializers.ValidationError(
-                    'Убедитесь, что это значение больше 0.'
+            ingredient_id = Ingredient.objects.get(id=item['id'])
+            ingredients_instance.append(
+                IngredientForRecipe(
+                    ingredient=ingredient_id, recipe=instance, amount=amount
                 )
-            if IngredientForRecipe.objects.filter(
-                    id=ingredient_id, amount=amount
-            ).exists():
-                ingredients_instance.remove(
-                    IngredientForRecipe.objects.get(id=ingredient_id,
-                                                    amount=amount
-                                                    ).ingredient)
-            else:
-                IngredientForRecipe.objects.get_or_create(
-                    recipe=instance,
-                    ingredient=get_object_or_404(Ingredient, id=ingredient_id),
-                    amount=amount
-                )
+            )
+        IngredientForRecipe.objects.bulk_create(ingredients_instance)
+        instance.name = validated_data.pop('name')
+        instance.text = validated_data.pop('text')
         if validated_data.get('image') is not None:
-            instance.image = validated_data.get('image', instance.image)
-        instance.ingredients.remove(*ingredients_instance)
+            instance.image = validated_data.pop('image')
+        instance.cooking_time = validated_data.pop('cooking_time')
+        instance.save()
         instance.tags.set(tags_data)
         return instance
+
+    def to_representation(self, instance):
+        return RecipeReadSerializer(
+            instance,
+            context={
+                'request': self.context.get('request')
+            }
+        ).data
 
 
 class RecipeReadSerializer(RecipeSerializer):

@@ -120,10 +120,11 @@ class FollowView(APIView):
 
     def delete(self, request, user_id):
         user = request.user
-        author = get_object_or_404(User, id=user_id)
-        follow = get_object_or_404(Follow, user=user, author=author)
+        follow = get_object_or_404(
+            Follow, user=user.id, author_id=user_id
+        )
         follow.delete()
-        return Response(f'{user} отписался от {author}',
+        return Response('Вы успешно отписаны',
                         status=status.HTTP_204_NO_CONTENT)
 
 
@@ -147,10 +148,9 @@ class FavoriteView(APIView):
 
     def delete(self, request, recipe_id):
         user = request.user
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        favorite = get_object_or_404(Favorite, user=user, recipe=recipe)
+        favorite = get_object_or_404(Favorite, user=user.id, recipe=recipe_id)
         favorite.delete()
-        return Response(f'Рецепт {recipe} удален из избранного у пользователя '
+        return Response(f'Рецепт удален из избранного у пользователя '
                         f'{user}', status=status.HTTP_204_NO_CONTENT)
 
 
@@ -172,8 +172,8 @@ class ShoppingCartView(APIView):
 
     def delete(self, request, recipe_id):
         user = request.user
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        Purchase.objects.get(user=user, recipe=recipe).delete()
+        recipe = get_object_or_404(Purchase, user=user.id, recipe=recipe_id)
+        recipe.delete()
         return Response(
             status=status.HTTP_204_NO_CONTENT
         )
