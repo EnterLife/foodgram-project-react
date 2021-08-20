@@ -1,31 +1,9 @@
 from colorfield.fields import ColorField
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
 from django.db import models
 
 User = get_user_model()
-
-
-class Follow(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='followers',
-        verbose_name='Пользователь подписчик')
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='following',
-        verbose_name='Пользователь на которого подписываемся')
-
-    class Meta:
-        verbose_name = 'Подписка'
-        verbose_name_plural = 'Подписки'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'author'], name='unique_follow'
-            )
-        ]
-
-    def __str__(self):
-        return f'{self.user} подписан на {self.author}'
 
 
 class Tag(models.Model):
@@ -128,8 +106,8 @@ class IngredientForRecipe(models.Model):
         related_name='ingredients_amounts',
     )
     amount = models.PositiveSmallIntegerField(
-        null=True,
-        verbose_name='Количество'
+        verbose_name='Количество', default=1,
+        validators=[MinValueValidator(1, 'Значение не может быть меньше 1')]
     )
 
     class Meta:
