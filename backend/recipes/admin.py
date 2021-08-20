@@ -1,7 +1,7 @@
 from django.contrib import admin
 from import_export.admin import ImportMixin
 
-from .models import (Favorites, Follow, Ingredient, IngredientForRecipe,
+from .models import (Favorite, Follow, Ingredient, IngredientForRecipe,
                      Recipe, Tag)
 from .resources import IngredientResource
 
@@ -38,4 +38,4 @@ admin.site.register(Follow, FollowAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Recipe, RecipeAdmin)
-admin.site.register(Favorites, FavoriteAdmin)
+admin.site.register(Favorite, FavoriteAdmin)
