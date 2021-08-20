@@ -29,34 +29,21 @@ class TagsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipesViewSet(viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
     pagination_class = PageNumberPagination
     permission_classes = [AdminOrAuthorOrReadOnly, ]
 
-    def get_queryset(self):
-        queryset = Recipe.objects.all()
-        is_in_shopping_cart = self.request.query_params.get(
-            "is_in_shopping_cart"
-        )
-        is_favorited = self.request.query_params.get("is_favorited")
-        cart = Purchase.objects.filter(user=self.request.user.id)
-        favorite = Favorite.objects.filter(user=self.request.user.id)
-
-        if is_in_shopping_cart == "true":
-            queryset = queryset.filter(purchase__in=cart)
-        elif is_in_shopping_cart == "false":
-            queryset = queryset.exclude(purchase__in=cart)
-        if is_favorited == "true":
-            queryset = queryset.filter(favorites__in=favorite)
-        elif is_favorited == "false":
-            queryset = queryset.exclude(favorites__in=favorite)
-        return queryset.all()
-
     def get_serializer_class(self):
         if self.request.method in ['GET']:
             return RecipeReadSerializer
         return RecipeSerializer
+
+    def get_serializer_context(self): 
+        context = super().get_serializer_context() 
+        context.update({'request': self.request}) 
+        return context
 
     @action(methods=["GET", "DELETE"],
             url_path='favorite', url_name='favorite',
