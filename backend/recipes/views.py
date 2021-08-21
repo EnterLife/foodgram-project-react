@@ -71,21 +71,19 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @action(methods=["GET", "DELETE"],
             url_path='favorites', url_name='favorites',
             permission_classes=[permissions.IsAuthenticated], detail=True)
-    def get_favorite(self, request, recipe_id):
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=recipe_id)
+    def favorite(self, request, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
         serializer = FavoriteSerializer(
-            data={'user': user.id, 'recipe': recipe.id},
-            context={'request': request}
+            data={'user': request.user.id, 'recipe': recipe.id}
         )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(recipe=recipe, user=request.user)
-        serializer = RecipeSubscriptionSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def delete(self, request, recipe_id):
-        user = request.user
-        favorite = get_object_or_404(Favorite, user=user, recipe__id=recipe_id)
+        if request.method == "GET":
+            serializer.is_valid(raise_exception=True)
+            serializer.save(recipe=recipe, user=request.user)
+            serializer = RecipeSubscriptionSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        favorite = get_object_or_404(
+            Favorite, user=request.user, recipe__id=pk
+        )
         favorite.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
