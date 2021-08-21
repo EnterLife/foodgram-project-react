@@ -1,4 +1,3 @@
-import django_filters.rest_framework
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
 from django.http.response import HttpResponse
@@ -39,13 +38,18 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 class RecipesViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
+    serializer_class = RecipeSerializer
     pagination_class = PageNumberPagination
     permission_classes = [AdminOrAuthorOrReadOnly, ]
 
+    def perform_create(self, serializer):
+        return serializer.save(author=self.request.user)
+
     def get_queryset(self):
         user = self.request.user
+        if user.is_anonymous:
+            return Recipe.objects.all()
         queryset = Recipe.objects.annotate(
             is_favorited=Exists(Favorite.objects.filter(
                 user=user, recipe_id=OuterRef('pk')
@@ -68,26 +72,33 @@ class RecipesViewSet(viewsets.ModelViewSet):
     @action(methods=["GET", "DELETE"],
             url_path='favorites', url_name='favorites',
             permission_classes=[permissions.IsAuthenticated], detail=True)
-    def favorite(self, request, pk):
+    def favorite(self, request, pk=None):
+        user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
+
+        data = {
+            'user': user.id,
+            'recipe': recipe.id,
+        }
         serializer = FavoriteSerializer(
-            data={'user': request.user.id, 'recipe': recipe.id}
+            data=data,
+            context={'request': request}
         )
-        if request.method == "GET":
-            serializer.is_valid(raise_exception=True)
-            serializer.save(recipe=recipe, user=request.user)
-            serializer = RecipeSubscriptionSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        favorite = get_object_or_404(
-            Favorite, user=request.user, recipe__id=pk
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        favorites = get_object_or_404(
+            Favorite, user=user, recipe=recipe
         )
-        favorite.delete()
-        return Response(
-            data={
-                'message': f'Рецепт {favorite.recipe} удален из избранного у '
-                           f'пользователя {request.user}'},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        favorites.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', ])
