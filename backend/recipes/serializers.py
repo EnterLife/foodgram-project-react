@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 from users.serializers import CustomUserSerializer
 
 from .models import (Favorite, Ingredient, IngredientForRecipe, Purchase,
@@ -92,12 +92,14 @@ class IngredientForRecipeCreate(IngredientForRecipeSerializer):
     id = serializers.IntegerField(write_only=True)
     amount = serializers.IntegerField(write_only=True)
 
-    def validate_amount(self, amount):
+    def validate(self, data):
+        amount = data['amount']
         if amount < 1:
-            raise serializers.ValidationError(
-                'Убедитесь, что это значение больше 0.'
-            )
-        return amount
+            error_data = {
+                'amount': ['Убедитесь, что указали значение больше 0.']
+            }
+            raise exceptions.ParseError(error_data)
+        return data
 
     def to_representation(self, instance):
         ingredient_in_recipe = [

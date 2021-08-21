@@ -76,8 +76,10 @@ class RecipesViewSet(viewsets.ModelViewSet):
         )
         favorite.delete()
         return Response(
-            f'Рецепт {favorite.recipe} удален из избранного у пользователя '
-            f'{request.user}', status=status.HTTP_204_NO_CONTENT
+            data={
+                'message': f'Рецепт {favorite.recipe} удален из избранного у '
+                           f'пользователя {request.user}'},
+            status=status.HTTP_204_NO_CONTENT
         )
 
 
@@ -132,20 +134,23 @@ class ShoppingCartView(APIView):
 
     def get(self, request, recipe_id):
         user = request.user
-        data = {
-            'user': user.id,
-            'recipe': recipe_id,
-        }
-        context = {'request': request}
-        serializer = PurchaseSerializer(data=data, context=context)
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+        serializer = PurchaseSerializer(
+            data={'user': user.id, 'recipe': recipe.id},
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(recipe=recipe, user=request.user)
+        serializer = RecipeSubscriptionSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
         user = request.user
-        recipe = get_object_or_404(Purchase, user=user.id, recipe=recipe_id)
-        recipe.delete()
+        cart = get_object_or_404(Purchase, user=user, recipe__id=recipe_id)
+        cart.delete()
         return Response(
+            data={
+                'message': f'Рецепт {cart.recipe} удален из корзины у '
+                           f'пользователя {user}'},
             status=status.HTTP_204_NO_CONTENT
         )
