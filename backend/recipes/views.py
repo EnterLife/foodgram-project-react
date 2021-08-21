@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -57,6 +57,30 @@ class RecipesViewSet(viewsets.ModelViewSet):
         if self.request.method in ['GET']:
             return RecipeReadSerializer
         return RecipeSerializer
+
+    @action(methods=["GET", "DELETE"],
+            url_path='favorite', url_name='favorite',
+            permission_classes=[permissions.IsAuthenticated], detail=True)
+    def favorite(self, request, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
+        serializer = FavoriteSerializer(
+            data={'user': request.user.id, 'recipe': recipe.id}
+        )
+        if request.method == "GET":
+            serializer.is_valid(raise_exception=True)
+            serializer.save(recipe=recipe, user=request.user)
+            serializer = RecipeSubscriptionSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        favorite = get_object_or_404(
+            Favorite, user=request.user, recipe__id=pk
+        )
+        favorite.delete()
+        return Response(
+            data={
+                'message': f'Рецепт {favorite.recipe} удален из избранного у '
+                           f'пользователя {request.user}'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -128,30 +152,5 @@ class ShoppingCartView(APIView):
             data={
                 'message': f'Рецепт {cart.recipe} удален из корзины у '
                            f'пользователя {user}'},
-            status=status.HTTP_204_NO_CONTENT
-        )
-
-
-class FavoriteViewSet(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ['get', 'delete']
-
-    def get(self, request, pk):
-        recipe = get_object_or_404(Recipe, id=pk)
-        serializer = FavoriteSerializer(
-            data={'user': request.user.id, 'recipe': recipe.id}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(recipe=recipe, user=request.user)
-        serializer = RecipeSubscriptionSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def delete(self, request, pk):
-        recipe = get_object_or_404(
-            Favorite, user=request.user, recipe__id=pk
-        )
-        recipe.delete()
-        return Response(
-            data={'message': 'Рецепт удален из избранного'},
             status=status.HTTP_204_NO_CONTENT
         )
