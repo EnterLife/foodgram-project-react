@@ -1,3 +1,4 @@
+import django_filters.rest_framework
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
 from django.http.response import HttpResponse
@@ -38,13 +39,11 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 class RecipesViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
     serializer_class = RecipeSerializer
     pagination_class = PageNumberPagination
     permission_classes = [AdminOrAuthorOrReadOnly, ]
-
-    def perform_create(self, serializer):
-        return serializer.save(author=self.request.user)
 
     def get_queryset(self):
         user = self.request.user
@@ -73,31 +72,19 @@ class RecipesViewSet(viewsets.ModelViewSet):
             url_path='favorites', url_name='favorites',
             permission_classes=[permissions.IsAuthenticated], detail=True)
     def favorite(self, request, pk=None):
-        user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-
-        data = {
-            'user': user.id,
-            'recipe': recipe.id,
-        }
         serializer = FavoriteSerializer(
-            data=data,
-            context={'request': request}
+            data={'user': request.user.id, 'recipe': recipe.id}
         )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @favorite.mapping.delete
-    def delete_favorite(self, request, pk=None):
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        favorites = get_object_or_404(
-            Favorite, user=user, recipe=recipe
+        if request.method == "GET":
+            serializer.is_valid(raise_exception=True)
+            serializer.save(recipe=recipe, user=request.user)
+            serializer = RecipeSubscriptionSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        favorite = get_object_or_404(
+            Favorite, user=request.user, recipe__id=pk
         )
-        favorites.delete()
-
+        favorite.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
