@@ -122,7 +122,7 @@ REST_FRAMEWORK = {
 DJOSER = {
     'HIDE_USERS': False,
     'SERIALIZERS': {
-        'users': 'recipes.serializers.CustomUserSerializer',
+        'users': 'users.serializers.CustomUserSerializer',
 
     },
 
