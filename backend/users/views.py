@@ -32,8 +32,7 @@ class CustomUserViewSet(UserViewSet):
         follow = get_object_or_404(Follow, user=request.user, author__id=id)
         follow.delete()
         return Response(data={'message': f'{request.user} отписался от '
-                                         f'{follow.author}'},
-                        status=status.HTTP_204_NO_CONTENT)
+                                         f'{follow.author}'},)
 
     @action(detail=False,
             methods=["GET"],
