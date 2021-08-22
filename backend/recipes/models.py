@@ -11,15 +11,20 @@ class Tag(models.Model):
         verbose_name='Название',
         help_text='Введите название тега',
         max_length=200,
+        unique=True,
     )
     color = ColorField(
         verbose_name='Цвет в HEX',
         help_text='Введите цвет тега в HEX',
+        unique=True,
+        null=True,
     )
     slug = models.CharField(
-        verbose_name='Slug тэга',
-        help_text='Введите Slug тэга',
+        verbose_name='Уникальный слаг',
+        help_text='Введите уникальный слаг',
         max_length=200,
+        unique=True,
+        null=True,
         validators=[
             RegexValidator(
                 regex=r'^[-a-zA-Z0-9_]+$',
@@ -40,7 +45,6 @@ class Ingredient(models.Model):
 
     name = models.CharField(
         max_length=200,
-        unique=True,
         verbose_name='Название ингредиента',
         help_text='Введите название ингредиента'
     )
@@ -80,7 +84,8 @@ class Recipe(models.Model):
         help_text='Укажите ингредиенты и их количество',
     )
     cooking_time = models.PositiveSmallIntegerField(
-        verbose_name='Время приготовления'
+        verbose_name='Время приготовления', default=1,
+        validators=[MinValueValidator(1, 'Значение не может быть меньше 1')]
     )
     tags = models.ManyToManyField(
         Tag,
@@ -104,12 +109,10 @@ class IngredientForRecipe(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='ingredients_amounts',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='ingredients_amounts',
     )
     amount = models.PositiveSmallIntegerField(
         verbose_name='Количество', default=1,
@@ -123,7 +126,7 @@ class IngredientForRecipe(models.Model):
         return f'{self.ingredient} в {self.recipe}'
 
 
-class Favorite(models.Model):
+class Favorites(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now_add=True,
@@ -134,7 +137,7 @@ class Favorite(models.Model):
         verbose_name_plural = verbose_name
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe'], name='unique_favorite'
+                fields=['user', 'recipe'], name='unique_favorite',
             )
         ]
 
@@ -156,7 +159,8 @@ class Purchase(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'], name='unique_shopping_cart'
-            )]
+            )
+        ]
 
     def __str__(self):
         return f'Рецепт {self.recipe} в списке покупок у {self.user}'
