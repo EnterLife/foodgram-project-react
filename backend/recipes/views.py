@@ -1,10 +1,10 @@
 import django_filters.rest_framework
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, OuterRef
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,29 +37,29 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 
 class RecipesViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
-    serializer_class = RecipeSerializer
+    pagination_class = PageNumberPagination
     permission_classes = [AdminOrAuthorOrReadOnly, ]
 
     def get_queryset(self):
-        user = self.request.user
-        if user.is_anonymous:
-            return Recipe.objects.all()
-        queryset = Recipe.objects.annotate(
-            is_favorited=Exists(Favorite.objects.filter(
-                user=user, recipe_id=OuterRef('pk')
-            )),
-            is_in_shopping_cart=Exists(Purchase.objects.filter(
-                user=user, recipe_id=OuterRef('pk')
-            ))
+        queryset = Recipe.objects.all()
+        is_in_shopping_cart = self.request.query_params.get(
+            "is_in_shopping_cart"
         )
-        if self.request.GET.get('is_favorited'):
-            return queryset.filter(is_favorited=True)
-        elif self.request.GET.get('is_in_shopping_cart'):
-            return queryset.filter(is_in_shopping_cart=True)
-        return queryset
+        is_favorited = self.request.query_params.get("is_favorited")
+        cart = Purchase.objects.filter(user=self.request.user.id)
+        favorite = Favorite.objects.filter(user=self.request.user.id)
+
+        if is_in_shopping_cart == "true":
+            queryset = queryset.filter(purchase__in=cart)
+        elif is_in_shopping_cart == "false":
+            queryset = queryset.exclude(purchase__in=cart)
+        if is_favorited == "true":
+            queryset = queryset.filter(favorites__in=favorite)
+        elif is_favorited == "false":
+            queryset = queryset.exclude(favorites__in=favorite)
+        return queryset.all()
 
     def get_serializer_class(self):
         if self.request.method in ['GET']:
@@ -70,18 +70,25 @@ class RecipesViewSet(viewsets.ModelViewSet):
             url_path='favorites', url_name='favorites',
             permission_classes=[permissions.IsAuthenticated], detail=True)
     def favorite(self, request, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
         serializer = FavoriteSerializer(
-            data={"recipe": pk, "user": request.user.id}
+            data={'user': request.user.id, 'recipe': recipe.id}
         )
         if request.method == "GET":
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            serializer = RecipeSubscriptionSerializer()
+            serializer.save(recipe=recipe, user=request.user)
+            serializer = RecipeSubscriptionSerializer(recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        serializer.is_valid(raise_exception=True)
-        disfavor = get_object_or_404(Favorite, **serializer.validated_data)
-        disfavor.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        favorite = get_object_or_404(
+            Favorite, user=request.user, recipe__id=pk
+        )
+        favorite.delete()
+        return Response(
+            data={
+                'message': f'Рецепт {favorite.recipe} удален из избранного у '
+                           f'пользователя {request.user}'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 @api_view(['GET', ])
