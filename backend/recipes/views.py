@@ -5,7 +5,6 @@ from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -42,7 +41,6 @@ class RecipesViewSet(viewsets.ModelViewSet):
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
     serializer_class = RecipeSerializer
-    pagination_class = PageNumberPagination
     permission_classes = [AdminOrAuthorOrReadOnly, ]
 
     def get_queryset(self):
@@ -72,19 +70,17 @@ class RecipesViewSet(viewsets.ModelViewSet):
             url_path='favorites', url_name='favorites',
             permission_classes=[permissions.IsAuthenticated], detail=True)
     def favorite(self, request, pk):
-        recipe = get_object_or_404(Recipe, id=pk)
         serializer = FavoriteSerializer(
-            data={'user': request.user.id, 'recipe': recipe.id}
+            data={"recipe": pk, "user": request.user.id}
         )
         if request.method == "GET":
             serializer.is_valid(raise_exception=True)
-            serializer.save(recipe=recipe, user=request.user)
-            serializer = RecipeSubscriptionSerializer(recipe)
+            serializer.save()
+            serializer = RecipeSubscriptionSerializer()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        favorite = get_object_or_404(
-            Favorite, user=request.user, recipe__id=pk
-        )
-        favorite.delete()
+        serializer.is_valid(raise_exception=True)
+        disfavor = get_object_or_404(Favorite, **serializer.validated_data)
+        disfavor.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
