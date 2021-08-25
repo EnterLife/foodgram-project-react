@@ -134,3 +134,7 @@ dmypy.json
 .DS_Store
 /backend/backend_media/*
 /.env
+
+/backend/recipes/migrations/
+
+/backend/users/migrations/
