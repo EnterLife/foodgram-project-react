@@ -74,7 +74,8 @@ class Recipe(models.Model):
         help_text='Укажите ингредиенты и их количество',
     )
     cooking_time = models.PositiveSmallIntegerField(
-        verbose_name='Время приготовления'
+        verbose_name='Время приготовления', default=1,
+        validators=[MinValueValidator(1, 'Значение не может быть меньше 1')]
     )
     tags = models.ManyToManyField(
         Tag,
@@ -137,7 +138,8 @@ class Favorite(models.Model):
 
 
 class Purchase(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             related_name='purchases')
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,)
     pub_date = models.DateTimeField(auto_now_add=True,
                                     verbose_name='Дата добавления')

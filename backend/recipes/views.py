@@ -92,7 +92,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
 @permission_classes([IsAuthenticated])
 def download_shopping_cart(request):
     user = request.user
-    cart = user.purchase_set.all()
+    cart = user.purchases.all()
     buying_list = {}
     for item in cart:
         recipe = item.recipe
@@ -145,9 +145,4 @@ class ShoppingCartView(APIView):
         user = request.user
         cart = get_object_or_404(Purchase, user=user, recipe__id=recipe_id)
         cart.delete()
-        return Response(
-            data={
-                'message': f'Рецепт {cart.recipe} удален из корзины у '
-                           f'пользователя {user}'},
-            status=status.HTTP_204_NO_CONTENT
-        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
