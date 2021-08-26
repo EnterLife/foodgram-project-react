@@ -4,8 +4,8 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from users.serializers import CustomUserSerializer
 
-from .models import (Favorite, Ingredient, IngredientForRecipe, ShoppingCart,
-                     Recipe, Tag)
+from .models import (Favorite, Ingredient, IngredientForRecipe, Recipe,
+                     ShoppingCart, Tag)
 
 User = get_user_model()
 
