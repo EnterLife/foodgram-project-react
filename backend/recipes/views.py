@@ -1,23 +1,19 @@
-import django_filters.rest_framework
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, OuterRef
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.serializers import RecipeSubscriptionSerializer
 
 from .filters import IngredientNameFilter, RecipeFilter
-from .models import (Favorite, Ingredient, IngredientForRecipe, Purchase,
-                     Recipe, Tag)
+from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from .permissions import AdminOrAuthorOrReadOnly
-from .serializers import (FavoriteSerializer, IngredientSerializer,
-                          PurchaseSerializer, RecipeReadSerializer,
-                          RecipeSerializer, TagSerializer)
+from .serializers import (IngredientSerializer, PurchaseSerializer,
+                          RecipeReadSerializer, RecipeSerializer,
+                          TagSerializer)
 
 User = get_user_model()
 
@@ -32,98 +28,121 @@ class TagsViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ModelViewSet):
     serializer_class = IngredientSerializer
     queryset = Ingredient.objects.all()
-    permission_classes = (AllowAny, )
+    permission_classes = (AllowAny,)
     pagination_class = None
     filterset_class = IngredientNameFilter
 
 
 class RecipesViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filter_class = RecipeFilter
-    serializer_class = RecipeSerializer
-    pagination_class = PageNumberPagination
-    permission_classes = [AdminOrAuthorOrReadOnly, ]
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_anonymous:
-            return Recipe.objects.all()
-        queryset = Recipe.objects.annotate(
-            is_favorited=Exists(Favorite.objects.filter(
-                user=user, recipe_id=OuterRef('pk')
-            )),
-            is_in_shopping_cart=Exists(Purchase.objects.filter(
-                user=user, recipe_id=OuterRef('pk')
-            ))
-        )
-        if self.request.GET.get('is_favorited'):
-            return queryset.filter(is_favorited=True)
-        elif self.request.GET.get('is_in_shopping_cart'):
-            return queryset.filter(is_in_shopping_cart=True)
-        return queryset
+    permission_classes = (AdminOrAuthorOrReadOnly,)
 
     def get_serializer_class(self):
-        if self.request.method in ['GET']:
+        if self.request.method == 'GET':
             return RecipeReadSerializer
         return RecipeSerializer
 
-    @action(methods=["GET", "DELETE"],
-            url_path='favorites', url_name='favorites',
-            permission_classes=[permissions.IsAuthenticated], detail=True)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context
+
+    @action(
+        detail=True,
+        methods=['GET', 'DELETE'],
+        url_path='favorites',
+        url_name='favorites',
+        permission_classes=(IsAuthenticated,)
+    )
     def favorite(self, request, pk):
+        user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
-        serializer = FavoriteSerializer(
-            data={'user': request.user.id, 'recipe': recipe.id}
-        )
-        if request.method == "GET":
-            serializer.is_valid(raise_exception=True)
-            serializer.save(recipe=recipe, user=request.user)
-            serializer = RecipeSubscriptionSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        favorite = get_object_or_404(
-            Favorite, user=request.user, recipe__id=pk
-        )
-        favorite.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['GET', ])
-@permission_classes([IsAuthenticated])
-def download_shopping_cart(request):
-    user = request.user
-    ingredients_in_recipe = IngredientForRecipe.objects.filter(
-        recipe__purchase__user=user
-    )
-    buying_list = {}
-    for item in ingredients_in_recipe:
-        amount = item.amount
-        name = item.ingredient.name
-        measurement_unit = item.ingredient.measurement_unit
-        if name not in buying_list:
-            buying_list[name] = {
-                'amount': amount,
-                'measurement_unit': measurement_unit
-            }
-        else:
-            buying_list[name]['amount'] = (
-                buying_list[name]['amount'] + amount
+        if self.request.method == 'GET':
+            obj, created = Favorite.objects.get_or_create(
+                user=user,
+                recipe=recipe
             )
-    shopping_list = []
-    for item in buying_list:
-        shopping_list.append(
-            f'{item} - {buying_list[item]["amount"]}, '
-            f'{buying_list[item]["measurement_unit"]}\n'
+            if not created:
+                return Response(
+                    'Рецепт уже в избранном',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = RecipeSubscriptionSerializer(recipe)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+        to_delete = get_object_or_404(Favorite, user=user, recipe=recipe)
+        to_delete.delete()
+        return Response(
+            'Удалено из избранного',
+            status=status.HTTP_204_NO_CONTENT
         )
-    response = HttpResponse(shopping_list, 'Content-Type: text/plain')
-    response['Content-Disposition'] = (
-        'attachment;' 'filename="shopping_list.txt"'
+
+    @action(
+        detail=True,
+        methods=['GET', 'DELETE'],
+        url_path='shopping_cart',
+        url_name='shopping_cart',
+        permission_classes=(IsAuthenticated,)
     )
-    return response
+    def shopping_cart(self, request, pk):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        if self.request.method == 'GET':
+            obj, created = ShoppingCart.objects.get_or_create(
+                user=user,
+                recipe=recipe
+            )
+            if not created:
+                return Response(
+                    'Рецепт уже в списке покупок',
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = RecipeSubscriptionSerializer(recipe)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+        to_delete = get_object_or_404(ShoppingCart, user=user, recipe=recipe)
+        to_delete.delete()
+        return Response(
+            'Удалено из списка покупок',
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+    @action(
+        detail=False,
+        url_path='download_shopping_cart',
+        url_name='download_shopping_cart',
+        permission_classes=(IsAuthenticated,)
+    )
+    def download_shopping_cart(self, request):
+        user = request.user
+        user_shopping_cart = user.shopping_cart.all()
+        shopping_cart = ShoppingCart.get_shopping_cart(user_shopping_cart)
+        downloadable_shopping_cart = []
+        position = 1
+        for ingredient, unit in shopping_cart.items():
+            downloadable_shopping_cart.append(
+                f"{position}. {ingredient} --- {unit['amount']} "
+                f"({unit['measurement_unit']})\n"
+            )
+            position += 1
+        filename = 'Shopping_Cart.txt'
+        response = HttpResponse(
+            downloadable_shopping_cart,
+            content_type='text/plain'
+        )
+        response['Content-Disposition'] = (
+            'attachment; filename={0}'.format(filename)
+        )
+        return response
 
 
 class ShoppingCartView(APIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAuthenticated,)
     http_method_names = ['get', 'delete']
 
     def get(self, request, recipe_id):
@@ -140,6 +159,6 @@ class ShoppingCartView(APIView):
 
     def delete(self, request, recipe_id):
         user = request.user
-        cart = get_object_or_404(Purchase, user=user, recipe__id=recipe_id)
+        cart = get_object_or_404(ShoppingCart, user=user, recipe__id=recipe_id)
         cart.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

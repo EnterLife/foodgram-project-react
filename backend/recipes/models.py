@@ -119,39 +119,72 @@ class IngredientForRecipe(models.Model):
 
 
 class Favorite(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    pub_date = models.DateTimeField(auto_now_add=True,
-                                    verbose_name='Дата добавления')
+    user = models.ForeignKey(
+        User,
+        verbose_name='Пользователь',
+        related_name='favorite',
+        on_delete=models.CASCADE
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name='Рецепт',
+        related_name='favorite',
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
         verbose_name = 'Избранное'
-        verbose_name_plural = verbose_name
+        verbose_name_plural = 'Избранное'
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe'], name='unique_favorite'
+                fields=['user', 'recipe'],
+                name='unique_favorite'
             )
         ]
+        ordering = ('recipe__name',)
 
     def __str__(self):
-        return f'Рецепт {self.recipe} в избранном у {self.user}'
+        return f'{self.recipe.name} в избранном у {self.user}'
 
 
-class Purchase(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,
-                             related_name='purchases')
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,)
-    pub_date = models.DateTimeField(auto_now_add=True,
-                                    verbose_name='Дата добавления')
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(
+        User,
+        verbose_name='Пользователь',
+        related_name='shopping_cart',
+        on_delete=models.CASCADE
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        verbose_name='Рецепт',
+        related_name='shopping_cart',
+        on_delete=models.CASCADE,
+    )
 
     class Meta:
-        verbose_name = 'Покупка'
-        verbose_name_plural = 'Покупки'
-        ordering = ['-pub_date']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipe'], name='unique_shopping_cart'
-            )]
+        verbose_name = 'Список покупок'
+        verbose_name_plural = 'Список покупок'
+        ordering = ('recipe__name',)
+
+    @classmethod
+    def get_shopping_cart(cls, shopping_cart):
+        shopping_cart_dict = {}
+        for to_add in shopping_cart:
+            ingredients = IngredientForRecipe.objects.filter(
+                recipe=to_add.recipe
+            ).prefetch_related('ingredient')
+            for ingredient in ingredients:
+                name = ingredient.ingredient.name
+                amount = ingredient.amount
+                measurement_unit = ingredient.ingredient.measurement_unit
+                if ingredient.ingredient.name in shopping_cart_dict:
+                    shopping_cart_dict[name]['amount'] += amount
+                else:
+                    shopping_cart_dict[name] = {
+                        'measurement_unit': measurement_unit,
+                        'amount': amount
+                    }
+        return shopping_cart_dict
 
     def __str__(self):
-        return f'Рецепт {self.recipe} в списке покупок у {self.user}'
+        return f'{self.recipe.name} в списке покупок у {self.user}'

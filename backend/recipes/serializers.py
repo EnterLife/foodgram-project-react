@@ -4,7 +4,7 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from users.serializers import CustomUserSerializer
 
-from .models import (Favorite, Ingredient, IngredientForRecipe, Purchase,
+from .models import (Favorite, Ingredient, IngredientForRecipe, ShoppingCart,
                      Recipe, Tag)
 
 User = get_user_model()
@@ -47,13 +47,13 @@ class PurchaseSerializer(serializers.ModelSerializer):
     recipe = serializers.IntegerField(source='recipe.id')
 
     class Meta:
-        model = Purchase
+        model = ShoppingCart
         fields = '__all__'
 
     def validate(self, data):
         user = data['user']['id']
         recipe = data['recipe']['id']
-        if Purchase.objects.filter(user=user, recipe__id=recipe).exists():
+        if ShoppingCart.objects.filter(user=user, recipe__id=recipe).exists():
             raise serializers.ValidationError(
                 {
                     "errors": "Вы уже добавили рецепт в корзину"
@@ -146,7 +146,9 @@ class RecipeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request is None or request.user.is_anonymous:
             return False
-        return Purchase.objects.filter(user=request.user, recipe=obj).exists()
+        return ShoppingCart.objects.filter(
+            user=request.user, recipe=obj
+        ).exists()
 
     def create(self, validated_data):
         request = self.context.get('request')
