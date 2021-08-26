@@ -5,15 +5,13 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from users.serializers import RecipeSubscriptionSerializer
 
 from .filters import IngredientNameFilter, RecipeFilter
 from .models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from .permissions import AdminOrAuthorOrReadOnly
-from .serializers import (IngredientSerializer, PurchaseSerializer,
-                          RecipeReadSerializer, RecipeSerializer,
-                          TagSerializer)
+from .serializers import (IngredientSerializer, RecipeReadSerializer,
+                          RecipeSerializer, TagSerializer)
 
 User = get_user_model()
 
@@ -139,26 +137,3 @@ class RecipesViewSet(viewsets.ModelViewSet):
             'attachment; filename={0}'.format(filename)
         )
         return response
-
-
-class ShoppingCartView(APIView):
-    permission_classes = (IsAuthenticated,)
-    http_method_names = ['get', 'delete']
-
-    def get(self, request, recipe_id):
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=recipe_id)
-        serializer = PurchaseSerializer(
-            data={'user': user.id, 'recipe': recipe.id},
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(recipe=recipe, user=request.user)
-        serializer = RecipeSubscriptionSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def delete(self, request, recipe_id):
-        user = request.user
-        cart = get_object_or_404(ShoppingCart, user=user, recipe__id=recipe_id)
-        cart.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
