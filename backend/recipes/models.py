@@ -1,9 +1,8 @@
 from colorfield.fields import ColorField
-from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-User = get_user_model()
+from users.models import CustomUser
 
 
 class Tag(models.Model):
@@ -16,7 +15,7 @@ class Tag(models.Model):
         verbose_name='Цвет в HEX',
         help_text='Введите цвет тега в HEX',
     )
-    slug = models.CharField(
+    slug = models.SlugField(
         verbose_name='Slug тэга',
         help_text='Введите Slug тэга',
         max_length=200,
@@ -55,7 +54,7 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE,
+        CustomUser, on_delete=models.CASCADE,
         related_name='recipes', verbose_name='Автор рецепта'
     )
     name = models.CharField(
@@ -71,6 +70,7 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient, through='IngredientForRecipe',
         verbose_name='Ингредиенты',
+        related_name='recipes',
         help_text='Укажите ингредиенты и их количество',
     )
     cooking_time = models.PositiveSmallIntegerField(
@@ -79,6 +79,8 @@ class Recipe(models.Model):
     )
     tags = models.ManyToManyField(
         Tag,
+        related_name='recipes',
+        blank=True,
         verbose_name='Теги',
         help_text='Выберите один или несколько тегов'
     )
@@ -99,12 +101,10 @@ class IngredientForRecipe(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='ingredients_amounts',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='ingredients_amounts',
     )
     amount = models.PositiveSmallIntegerField(
         verbose_name='Количество', default=1,
@@ -120,15 +120,15 @@ class IngredientForRecipe(models.Model):
 
 class Favorite(models.Model):
     user = models.ForeignKey(
-        User,
+        CustomUser,
         verbose_name='Пользователь',
-        related_name='favorite',
+        related_name='favorite_subscriber',
         on_delete=models.CASCADE
     )
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
-        related_name='favorite',
+        related_name='favorite_recipe',
         on_delete=models.CASCADE,
     )
 
@@ -138,7 +138,7 @@ class Favorite(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_favorite'
+                name='unique_favorites_recipes'
             )
         ]
         ordering = ('recipe__name',)
@@ -149,15 +149,15 @@ class Favorite(models.Model):
 
 class ShoppingCart(models.Model):
     user = models.ForeignKey(
-        User,
+        CustomUser,
         verbose_name='Пользователь',
-        related_name='shopping_cart',
+        related_name='purchases',
         on_delete=models.CASCADE
     )
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
-        related_name='shopping_cart',
+        related_name='customers',
         on_delete=models.CASCADE,
     )
 
