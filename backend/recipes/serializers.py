@@ -2,7 +2,6 @@ from djoser.serializers import UserSerializer as BaseUserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from users.models import Follow
-from users.serializers import CustomUserSerializer
 
 from .models import (Favorite, Ingredient, IngredientForRecipe, Recipe,
                      ShoppingCart, Tag)
@@ -21,26 +20,6 @@ class TagSerializer(serializers.ModelSerializer):
             msg = f'Tag with id `{id_}` does not exist.'
             raise serializers.ValidationError(msg)
         return id_
-
-
-class PurchaseSerializer(serializers.ModelSerializer):
-    user = serializers.IntegerField(source='user.id')
-    recipe = serializers.IntegerField(source='recipe.id')
-
-    class Meta:
-        model = ShoppingCart
-        fields = '__all__'
-
-    def validate(self, data):
-        user = data['user']['id']
-        recipe = data['recipe']['id']
-        if ShoppingCart.objects.filter(user=user, recipe__id=recipe).exists():
-            raise serializers.ValidationError(
-                {
-                    "errors": "Вы уже добавили рецепт в корзину"
-                }
-            )
-        return data
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -184,16 +163,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
 
         return {**data, 'tags': tags_data, 'ingredients': ingredients_data}
-
-
-class RecipeReadSerializer(RecipeSerializer):
-    tags = TagSerializer(read_only=True, many=True)
-    author = CustomUserSerializer(read_only=True)
-    ingredients = serializers.SerializerMethodField()
-
-    def get_ingredients(self, obj):
-        ingredients = IngredientForRecipe.objects.filter(recipe=obj)
-        return IngredientForRecipeSerializer(ingredients, many=True).data
 
 
 class UserSerializer(BaseUserSerializer):
