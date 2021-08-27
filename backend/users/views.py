@@ -1,12 +1,12 @@
 
 from recipes.paginators import PageNumberPagination
+from recipes.serializers import UserSerializer
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import CustomUser, Follow
-from .serializers import UserSerializer
 
 
 class FollowViewSet(viewsets.GenericViewSet):
