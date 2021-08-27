@@ -140,7 +140,6 @@ class Favorite(models.Model):
                 name='unique_favorites_recipes'
             )
         ]
-        ordering = ('recipe__name',)
 
     def __str__(self):
         return f'{self.recipe.name} в избранном у {self.user}'
@@ -163,7 +162,6 @@ class ShoppingCart(models.Model):
     class Meta:
         verbose_name = 'Список покупок'
         verbose_name_plural = 'Список покупок'
-        ordering = ('recipe__name',)
 
     def __str__(self):
         return f'{self.recipe.name} в списке покупок у {self.user}'
