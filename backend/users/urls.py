@@ -1,4 +1,4 @@
-from django.urls import include, re_path
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import FollowViewSet
@@ -7,6 +7,6 @@ router = DefaultRouter()
 router.register('users', FollowViewSet, basename='users')
 
 urlpatterns = [
-    re_path(r'^', include('djoser.urls')),
-    re_path(r'^auth/', include('djoser.urls.authtoken')),
+    path('', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
 ]

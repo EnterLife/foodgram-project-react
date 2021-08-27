@@ -42,9 +42,6 @@ class Follow(models.Model):
         CustomUser, on_delete=models.CASCADE,
         related_name='following',
         verbose_name='Пользователь на которого подписываемся')
-    created_at = models.DateTimeField(
-        auto_now_add=True, null=True, verbose_name='Время создания'
-    )
 
     class Meta:
         verbose_name = 'Подписка'
