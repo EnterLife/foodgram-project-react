@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .filters import IngredientNameFilter, RecipeFilter
+from .filters import IngredientFilter, RecipeFilter
 from .models import (Favorite, Ingredient, IngredientForRecipe, Recipe,
                      ShoppingCart, Tag)
 from .paginators import PageNumberPaginatorModified
@@ -25,7 +25,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     serializer_class = IngredientSerializer
     queryset = Ingredient.objects.all()
     permission_classes = (AllowAny,)
-    filterset_class = IngredientNameFilter
+    filterset_class = IngredientFilter
     filter_backends = [DjangoFilterBackend, ]
     pagination_class = None
 
