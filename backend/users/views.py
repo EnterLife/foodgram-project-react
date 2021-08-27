@@ -1,73 +1,57 @@
-from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-from djoser.views import UserViewSet
-from rest_framework import permissions, status
+
+from recipes.paginators import PageNumberPagination
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Follow
-from .serializers import ShowFollowsSerializer
-
-User = get_user_model()
+from .models import CustomUser, Follow
+from .serializers import UserSerializer
 
 
-class CustomUserViewSet(UserViewSet):
+class FollowViewSet(viewsets.GenericViewSet):
+    queryset = CustomUser.objects.all()
+    permission_classes = (IsAuthenticated,)
 
-    @action(
-        detail=True,
-        methods=['GET', 'DELETE'],
-        url_path='subscribe',
-        url_name='subscribe'
-    )
-    def subscribe(self, request, pk):
+    @action(detail=False)
+    def subscriptions(self, request):
+        user_qs = CustomUser.objects.filter(following__user=request.user)
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        result_page = paginator.paginate_queryset(user_qs, request)
+        serializer = UserSerializer(result_page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=['GET', 'DELETE'])
+    def subscribe(self, request, **kwargs):
         user = request.user
-        author = get_object_or_404(User, id=pk)
-        if user == author:
-            return Response(
-                'Подписка на самого себя запрещена',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        if self.request.method == 'GET':
-            obj, created = Follow.objects.get_or_create(
-                user=user,
-                author=author
-            )
-            if not created:
-                return Response(
-                    'Вы уже подписаны на этого пользователя',
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            serializer = ShowFollowsSerializer(author)
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-        to_delete = get_object_or_404(Follow, user=user, author=author)
-        to_delete.delete()
-        return Response(
-            'Вы отписались от пользователя',
-            status=status.HTTP_204_NO_CONTENT
-        )
 
-    @action(detail=False,
-            methods=["GET"],
-            url_path='subscriptions',
-            url_name='subscriptions',
-            permission_classes=[permissions.IsAuthenticated])
-    def show_follows(self, request):
-        user = request.user
-        subscription = User.objects.filter(following__user=user)
-        page = self.paginate_queryset(subscription)
-        if page is not None:
-            serializer = ShowFollowsSerializer(
-                page,
-                many=True,
-                context={'request': request}
-            )
-            return self.get_paginated_response(serializer.data)
-        serializer = ShowFollowsSerializer(
-            subscription,
-            many=True,
-            context={'request': request}
-        )
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        if request.method == 'GET':
+            author = self.get_object()
+            if Follow.objects.filter(user=user, author=author).exists():
+
+                return Response({
+                    'message': 'Вы уже подписаны',
+                    'status': f'{status.HTTP_400_BAD_REQUEST}'
+                })
+
+            Follow.objects.create(user=user, author=author)
+
+            return Response(status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            count, _ = Follow.objects.filter(
+                author__pk=kwargs.get('pk'),
+                user=user).delete()
+
+            if count == 0:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+            return Response({
+                'message': 'Удалено',
+                'status': f'{status.HTTP_204_NO_CONTENT}'
+            })
+
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)

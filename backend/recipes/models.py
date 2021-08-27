@@ -166,25 +166,5 @@ class ShoppingCart(models.Model):
         verbose_name_plural = 'Список покупок'
         ordering = ('recipe__name',)
 
-    @classmethod
-    def get_shopping_cart(cls, shopping_cart):
-        shopping_cart_dict = {}
-        for to_add in shopping_cart:
-            ingredients = IngredientForRecipe.objects.filter(
-                recipe=to_add.recipe
-            ).prefetch_related('ingredient')
-            for ingredient in ingredients:
-                name = ingredient.ingredient.name
-                amount = ingredient.amount
-                measurement_unit = ingredient.ingredient.measurement_unit
-                if ingredient.ingredient.name in shopping_cart_dict:
-                    shopping_cart_dict[name]['amount'] += amount
-                else:
-                    shopping_cart_dict[name] = {
-                        'measurement_unit': measurement_unit,
-                        'amount': amount
-                    }
-        return shopping_cart_dict
-
     def __str__(self):
         return f'{self.recipe.name} в списке покупок у {self.user}'
