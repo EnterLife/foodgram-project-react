@@ -4,9 +4,9 @@
 Дипломный проект — сайт Foodgram - «Продуктовый помощник».
 
 Проект: 
-http://178.154.194.155/recipes
+http://84.252.136.148/recipes
 
-http://178.154.194.155/admin admin@mai.com admin
+http://84.252.136.148/admin admin@mail.com admin
 
 # Порядок установки 
 ## В режиме разработки 
