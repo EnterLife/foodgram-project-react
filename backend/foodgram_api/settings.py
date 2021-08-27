@@ -17,9 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_filters',
     'rest_framework',
-    'rest_framework_simplejwt',
     'rest_framework.authtoken',
-    'import_export',
     'djoser',
     'colorfield',
     'users',
@@ -120,10 +118,12 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    'HIDE_USERS': False,
-    'SERIALIZERS': {
-        'users': 'users.serializers.CustomUserSerializer',
+    'LOGIN_FIELD': 'email',
 
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.CustomUserCreateSerializer',
+        'user': 'users.serializers.UserSerializer',
+        'current_user': 'users.serializers.UserSerializer'
     },
 
     'PERMISSIONS': {
