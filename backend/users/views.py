@@ -16,12 +16,10 @@ class FollowViewSet(viewsets.GenericViewSet):
     @action(detail=False)
     def subscriptions(self, request):
         user_qs = CustomUser.objects.filter(following__user=request.user)
-
         paginator = PageNumberPagination()
         paginator.page_size = 10
         result_page = paginator.paginate_queryset(user_qs, request)
         serializer = UserSerializer(result_page, many=True)
-
         return paginator.get_paginated_response(serializer.data)
 
     @action(detail=True, methods=['GET', 'DELETE'])
@@ -30,28 +28,22 @@ class FollowViewSet(viewsets.GenericViewSet):
 
         if request.method == 'GET':
             author = self.get_object()
-            if Follow.objects.filter(user=user, author=author).exists():
-
+            create = Follow.objects.get_or_create(user=user, author=author)
+            if not create:
                 return Response({
                     'message': 'Вы уже подписаны',
                     'status': f'{status.HTTP_400_BAD_REQUEST}'
                 })
-
-            Follow.objects.create(user=user, author=author)
-
             return Response(status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             count, _ = Follow.objects.filter(
                 author__pk=kwargs.get('pk'),
                 user=user).delete()
-
             if count == 0:
                 return Response(status=status.HTTP_404_NOT_FOUND)
-
             return Response({
                 'message': 'Удалено',
                 'status': f'{status.HTTP_204_NO_CONTENT}'
             })
-
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
