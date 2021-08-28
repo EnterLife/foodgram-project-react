@@ -30,15 +30,7 @@ class FollowViewSet(viewsets.GenericViewSet):
 
         if request.method == 'GET':
             author = self.get_object()
-            if Follow.objects.filter(user=user, author=author).exists():
-
-                return Response({
-                    'message': 'Вы уже подписаны',
-                    'status': f'{status.HTTP_400_BAD_REQUEST}'
-                })
-
             Follow.objects.create(user=user, author=author)
-
             return Response(status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':

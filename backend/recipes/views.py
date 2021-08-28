@@ -45,14 +45,7 @@ class FavouriteViewSet(APIView):
     def get(self, request, recipe_id):
         user = request.user
         recipe = get_object_or_404(Recipe, id=recipe_id)
-        _, is_created = Favorite.objects.get_or_create(user=user,
-                                                       recipe=recipe)
-        if not is_created:
-            return Response({
-                'message': 'Рецепт уже в избранном',
-                'status': f'{status.HTTP_400_BAD_REQUEST}'
-            })
-
+        _ = Favorite.objects.get_or_create(user=user, recipe=recipe)
         return Response(status=status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
