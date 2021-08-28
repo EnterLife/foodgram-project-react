@@ -34,16 +34,16 @@ class FollowViewSet(viewsets.GenericViewSet):
                     'message': 'Вы уже подписаны',
                     'status': f'{status.HTTP_400_BAD_REQUEST}'
                 })
-            return Response(status=status.HTTP_201_CREATED)
+            return Response(status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             count, _ = Follow.objects.filter(
                 author__pk=kwargs.get('pk'),
                 user=user).delete()
             if count == 0:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+                return Response(status.HTTP_404_NOT_FOUND)
             return Response({
                 'message': 'Удалено',
                 'status': f'{status.HTTP_204_NO_CONTENT}'
             })
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return Response(status.HTTP_405_METHOD_NOT_ALLOWED)

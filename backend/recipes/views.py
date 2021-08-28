@@ -53,7 +53,7 @@ class FavouriteViewSet(APIView):
                 'status': f'{status.HTTP_400_BAD_REQUEST}'
             })
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
         user = request.user
