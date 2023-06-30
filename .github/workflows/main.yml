@@ -48,6 +48,7 @@ jobs:
         with:
           push: true
           context: ./backend/
+          compose-file: "./infra/docker-compose.yml"
           tags: ${{ secrets.DOCKER_USERNAME }}/foodgram_backend:latest
           
    
